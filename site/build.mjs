@@ -69,22 +69,26 @@ function gate(payload) {
   form{width:min(340px,88vw);text-align:center}
   h1{font-family:"Hiragino Maru Gothic ProN","M PLUS Rounded 1c",sans-serif;color:#075F7C;font-size:30px;margin:0 0 6px}
   p{margin:0 0 22px;color:#4E6B78;font-size:15px}
-  input{width:100%;box-sizing:border-box;font-size:18px;padding:14px 16px;border-radius:16px;border:2px solid #CBE9EF;background:#fff;color:inherit}
+  input[type="password"]{width:100%;box-sizing:border-box;font-size:18px;padding:14px 16px;border-radius:16px;border:2px solid #CBE9EF;background:#fff;color:inherit}
   input:focus{outline:none;border-color:#0A7EA4}
-  button{margin-top:12px;width:100%;font:700 17px "Hiragino Maru Gothic ProN",sans-serif;padding:14px;border:0;border-radius:999px;background:#E4486A;color:#fff;cursor:pointer}
+  button[type="submit"]{margin-top:14px;width:100%;font:700 17px "Hiragino Maru Gothic ProN",sans-serif;padding:14px;border:0;border-radius:999px;background:#E4486A;color:#fff;cursor:pointer}
   button:disabled{opacity:.6}
   .err{min-height:1.6em;margin-top:12px;color:#C2304F;font-size:14px}
   label{display:block;text-align:left;font-size:14px;margin-bottom:6px}
+  .hint{margin-top:14px;font-size:12.5px;color:#4E6B78;line-height:1.4}
 </style>
 </head>
 <body>
 <form id="f" autocomplete="on" hidden>
   <h1>ふたりのハワイ</h1>
   <p>旅のしおりを開くパスワードを入力してください</p>
+  <!-- Safariキーチェーン自動保存用のダミーユーザー名 -->
+  <input type="text" name="username" autocomplete="username" value="hawaii" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" tabindex="-1">
   <label for="pw">パスワード</label>
-  <input id="pw" type="password" autocomplete="current-password" required autofocus>
+  <input id="pw" name="password" type="password" autocomplete="current-password" required autofocus>
   <button id="b" type="submit">しおりを開く</button>
   <div class="err" id="err" role="alert"></div>
+  <div class="hint">※一度開くと端末に保存され、次回から自動で開きます</div>
 </form>
 <script>
 (function(){
@@ -101,18 +105,19 @@ function gate(payload) {
     return crypto.subtle.deriveKey({name:"PBKDF2",salt:u8(P.salt),iterations:P.iter,hash:"SHA-256"},base,{name:"AES-GCM",length:256},true,["decrypt"]);
   }
   var f=document.getElementById("f"),err=document.getElementById("err"),b=document.getElementById("b");
+  var pwEl=document.getElementById("pw");
   (async function(){
     var saved=localStorage.getItem(K);
     if(saved){
       try{var key=await crypto.subtle.importKey("raw",u8(saved),"AES-GCM",false,["decrypt"]);show(await open(key));return;}
       catch(e){localStorage.removeItem(K);}
     }
-    f.hidden=false;document.getElementById("pw").focus();
+    f.hidden=false;pwEl.focus();
   })();
   f.addEventListener("submit",async function(e){
     e.preventDefault();b.disabled=true;b.textContent="開いています…";err.textContent="";
     try{
-      var key=await derive(document.getElementById("pw").value);
+      var key=await derive(pwEl.value);
       var html=await open(key);
       try{localStorage.setItem(K,b64(await crypto.subtle.exportKey("raw",key)));}catch(_){}
       show(html);
